@@ -24,13 +24,20 @@ module Apartment
 
       #   Create a new database, import schema, seed if appropriate
       #
-      #   @param {String} database Database name
+      #   @param {hash} database_info, :database, :host, :default_db
       #   -------------------------------------------------------
       #   Will call create_database function in this file to do the actual job.
-      def create(database)
-        create_database(database)
+      def create(database_info)
 
-        process(database) do
+        puts "Creating databse with db_info:"
+        puts "#{database_info}"
+
+        create_database(database_info)
+
+        database_config = database_info.clone.tap {|config| config[:default_db] = nil}
+        
+        # Swich to created new db and do stuff, like seed, then switch back to cur db.
+        process(database_config) do
           import_database_schema
 
           # Seed data if appropriate
@@ -38,11 +45,14 @@ module Apartment
 
           yield if block_given?
         end
+
+        puts "Creating finished, now in database:"
+        puts "#{current_database}"
       end
 
       #   Get the current database name
       #
-      #   @return {String} current database name
+      #   @return {hash} current database's config, :database, :host
       #   ---------------------------------------
       #   See file lib/apartment.rb
       #   The body is equivalent as
@@ -51,6 +61,11 @@ module Apartment
       #
       #   If you do not set any :connection_class
       def current_database
+        Apartment.connection.instance_variable_get(:@config).clone
+      end
+
+      # return {string}, name of the current database
+      def current_database_name
         Apartment.connection.current_database
       end
 
@@ -60,6 +75,7 @@ module Apartment
         current_database
       end
 
+      #   TODO: MODIFY DROP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       #   Drop the database
       #
       #   @param {String} database Database name
@@ -80,11 +96,13 @@ module Apartment
 
       #   Connect to db, do your biz, switch back to previous db
       #
-      #   @param {String?} database Database or schema to connect to
+      #   @param {hash} database_config, :database, :host
       #
-      def process(database = nil)
+      def process(database_config = nil)
         current_db = current_database
-        switch(database)
+
+        switch(database_config)
+
         yield if block_given?
 
       ensure
@@ -119,16 +137,16 @@ module Apartment
 
       #   Switch to new connection (or schema if appopriate)
       #
-      #   @param {String} database Database name
+      #   @param {hash} database_config, :database, :host
       #   ------------------------------------------------
       #   Some doc on .tap method, it is interesting.
       #   http://apidock.com/rails/Object/tap
-      def switch(database = nil)
+      def switch(database_config = nil)
         # Just connect to default db and return
 
-        return reset if database.nil?
+        return reset if database_config.nil?
 
-        connect_to_new(database).tap do
+        connect_to_new(database_config).tap do
           ActiveRecord::Base.connection.clear_query_cache
         end
       end
@@ -146,7 +164,7 @@ module Apartment
 
       #   Create the database
       #
-      #   @param {String} database Database name
+      #   @param {hash} database_info, :database, :host, :default_server
       #   --------------------------------------
       #   See file lib/apartment.rb
       #   The body is equivalent as
@@ -154,24 +172,31 @@ module Apartment
       #   ActiveRecord::Base.connection.create_database( environmentify(database) )
       #
       #   If you do not set any :connection_class
-      def create_database(database)
-        Apartment.connection.create_database( environmentify(database) )
+      def create_database(database_info)
+
+        default_database_config = database_info.clone.tap do |config|
+          config[:database] = database_info[:default_db]          
+        end
+
+        process(default_database_config) do
+          Apartment.connection.create_database( environmentify(database_info[:database]) )
+        end
 
       rescue *rescuable_exceptions
-        raise DatabaseExists, "The database #{environmentify(database)} already exists."
+        raise DatabaseExists, "The database #{environmentify(database_info[:database])} already exists."
       end
 
       #   Connect to new database
       #
-      #   @param {String} database Database name
-      #   -------------------------------------------
+      #   @param {hash} database_config, :database, :host
+      #   -----------------------------------------------
       #   See file lib/apartment.rb
-      def connect_to_new(database)
-        Apartment.establish_connection multi_tenantify(database)
+      def connect_to_new(database_config)
+        Apartment.establish_connection multi_tenantify(database_config)
         Apartment.connection.active?   # call active? to manually check if this connection is valid
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{environmentify(database)} cannot be found."
+        raise DatabaseNotFound, "The database #{environmentify(database_config[:database])} cannot be found."
       end
 
       #   Prepend the environment if configured and the environment isn't already there
@@ -202,13 +227,20 @@ module Apartment
       end
 
       #   Return a new config that is multi-tenanted
+      #   
+      #   NOTICE: This method could become dummy 
+      #             if database_config is the full configuration.
       #   --------------------------------------------------
       #   MAGIC IS HERE:
       #   this method will update the @config with point to correct database
       #   by updating the hash.
-      def multi_tenantify(database)
+      def multi_tenantify(database_config)
         @config.clone.tap do |config|
-          config[:database] = environmentify(database)
+          config[:database] = environmentify(database_config[:database])
+          config[:host] = database_config[:host] unless database_config[:host].nil?
+          config[:username] = database_config[:username] #unless database_config[:username].nil?
+          config[:password] = database_config[:password] #unless database_config[:password].nil?
+          # ... = ..., maybe?
         end
       end
 

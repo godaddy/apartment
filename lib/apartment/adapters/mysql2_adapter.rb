@@ -19,10 +19,10 @@ module Apartment
       #   Abstract adapter will catch generic ActiveRecord error
       #   Catch specific adapter errors here
       #
-      #   @param {String} database Database name
+      #   @param {hash} database, :database, :host.
       #   ---------------------------------------
       #   Here "super" just pass the call to the parent class.
-      def connect_to_new(database = nil)
+      def connect_to_new(database_config = nil)
         super
       rescue Mysql2::Error
         Apartment::Database.reset
@@ -55,14 +55,18 @@ module Apartment
 
       #   Set schema current_database to new db
       #
-      def connect_to_new(database)
-        return reset if database.nil?
+      def connect_to_new(database_config = nil)
+        
+        return reset if database_config.nil?
 
-        Apartment.connection.execute "use #{environmentify(database)}"
+        super
+        # Pass the call to super instead of fireing use command now, 
+        #   since database might exist in different server. 
+        # Apartment.connection.execute "USE #{environmentify(database_config[:database])}"
 
       rescue ActiveRecord::StatementInvalid
         Apartment::Database.reset
-        raise DatabaseNotFound, "Cannot find database #{environmentify(database)}"
+        raise DatabaseNotFound, "Cannot find database #{environmentify(database_config[:database])}"
       end
 
       def process_excluded_model(model)
