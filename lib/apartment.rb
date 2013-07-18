@@ -14,6 +14,10 @@ module Apartment
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
 
+    # Please read this doc first:
+    # http://www.ruby-doc.org/stdlib-2.0/libdoc/forwardable/rdoc/Forwardable.html
+    # It is about def_delegators.
+    # It is short and very easy, but without understanding it, this file will be gibberish.
     def_delegators :connection_class, :connection, :establish_connection
 
     # configure apartment with available options
@@ -66,6 +70,8 @@ module Apartment
 
   end
 
+  # See this doc for autoload:
+  # http://www.ruby-doc.org/core-2.0/Kernel.html#method-i-autoload
   autoload :Database, 'apartment/database'
   autoload :Migrator, 'apartment/migrator'
   autoload :Reloader, 'apartment/reloader'

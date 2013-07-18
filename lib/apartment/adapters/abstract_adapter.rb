@@ -6,7 +6,18 @@ module Apartment
 
       #   @constructor
       #   @param {Hash} config Database config
-      #
+      #   ------------------------------------------------------
+      #   Basically, config is the info in database in yml file.
+      #   Example of what @config might be: 
+      #           {:adapter=>"mysql2", 
+      #            :encoding=>"utf8", 
+      #            :reconnect=>false, 
+      #            :database=>"spree", 
+      #            :pool=>5, 
+      #            :username=>"root", 
+      #            :password=>nil, 
+      #            :host=>"127.0.0.1", 
+      #            :port=>3306}
       def initialize(config)
         @config = config
       end
@@ -14,7 +25,8 @@ module Apartment
       #   Create a new database, import schema, seed if appropriate
       #
       #   @param {String} database Database name
-      #
+      #   -------------------------------------------------------
+      #   Will call create_database function in this file to do the actual job.
       def create(database)
         create_database(database)
 
@@ -31,7 +43,13 @@ module Apartment
       #   Get the current database name
       #
       #   @return {String} current database name
+      #   ---------------------------------------
+      #   See file lib/apartment.rb
+      #   The body is equivalent as
       #
+      #   ActiveRecord::Base.connection.current_database
+      #
+      #   If you do not set any :connection_class
       def current_database
         Apartment.connection.current_database
       end
@@ -45,7 +63,13 @@ module Apartment
       #   Drop the database
       #
       #   @param {String} database Database name
+      #   --------------------------------------
+      #   See file lib/apartment.rb
+      #   The body is equivalent as
       #
+      #   ActiveRecord::Base.connection.execute("DROP DATABASE #{environmentify(database)}" )
+      #
+      #   If you do not set any :connection_class
       def drop(database)
         # Apartment.connection.drop_database   note that drop_database will not throw an exception, so manually execute
         Apartment.connection.execute("DROP DATABASE #{environmentify(database)}" )
@@ -68,7 +92,12 @@ module Apartment
       end
 
       #   Establish a new connection for each specific excluded model
+      #   ------------------------------------------------------------
+      #   Because a model will inherit from ActiveRecord::Base, the model will
+      #   have a method establish_connection defined in AR::Base class.
       #
+      #   The logic of this method is that for those exluded_models, connection to 
+      #   default/common db first, then do the business.
       def process_excluded_models
         # All other models will shared a connection (at Apartment.connection_class) and we can modify at will
         Apartment.excluded_models.each do |excluded_model|
@@ -77,7 +106,13 @@ module Apartment
       end
 
       #   Reset the database connection to the default
+      #   --------------------------------------
+      #   See file lib/apartment.rb
+      #   The body is equivalent as
       #
+      #   ActiveRecord::Base.establish_connection @config
+      #
+      #   If you do not set any :connection_class
       def reset
         Apartment.establish_connection @config
       end
@@ -85,9 +120,12 @@ module Apartment
       #   Switch to new connection (or schema if appopriate)
       #
       #   @param {String} database Database name
-      #
+      #   ------------------------------------------------
+      #   Some doc on .tap method, it is interesting.
+      #   http://apidock.com/rails/Object/tap
       def switch(database = nil)
         # Just connect to default db and return
+
         return reset if database.nil?
 
         connect_to_new(database).tap do
@@ -96,7 +134,9 @@ module Apartment
       end
 
       #   Load the rails seed file into the db
-      #
+      #   ------------------------------------------------
+      #   Explaination on silence_stream:
+      #   http://apidock.com/rails/Kernel/silence_stream
       def seed_data
         silence_stream(STDOUT){ load_or_abort("#{Rails.root}/db/seeds.rb") } # Don't log the output of seeding the db
       end
@@ -107,7 +147,13 @@ module Apartment
       #   Create the database
       #
       #   @param {String} database Database name
+      #   --------------------------------------
+      #   See file lib/apartment.rb
+      #   The body is equivalent as
       #
+      #   ActiveRecord::Base.connection.create_database( environmentify(database) )
+      #
+      #   If you do not set any :connection_class
       def create_database(database)
         Apartment.connection.create_database( environmentify(database) )
 
@@ -118,7 +164,8 @@ module Apartment
       #   Connect to new database
       #
       #   @param {String} database Database name
-      #
+      #   -------------------------------------------
+      #   See file lib/apartment.rb
       def connect_to_new(database)
         Apartment.establish_connection multi_tenantify(database)
         Apartment.connection.active?   # call active? to manually check if this connection is valid
@@ -155,7 +202,10 @@ module Apartment
       end
 
       #   Return a new config that is multi-tenanted
-      #
+      #   --------------------------------------------------
+      #   MAGIC IS HERE:
+      #   this method will update the @config with point to correct database
+      #   by updating the hash.
       def multi_tenantify(database)
         @config.clone.tap do |config|
           config[:database] = environmentify(database)
@@ -163,7 +213,11 @@ module Apartment
       end
 
       #   Load a file or abort if it doesn't exists
+      #   ---------------------------------------------------
+      #   See this doc for load:
+      #   http://www.ruby-doc.org/core-2.0/Kernel.html#method-i-load
       #
+      #   Basically, load will excute all the ruby codes in "file".
       def load_or_abort(file)
         if File.exists?(file)
           load(file)

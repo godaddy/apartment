@@ -20,7 +20,8 @@ module Apartment
       #   Catch specific adapter errors here
       #
       #   @param {String} database Database name
-      #
+      #   ---------------------------------------
+      #   Here "super" just pass the call to the parent class.
       def connect_to_new(database = nil)
         super
       rescue Mysql2::Error
