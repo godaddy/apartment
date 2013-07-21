@@ -1,4 +1,5 @@
 require 'apartment/railtie' if defined?(Rails)
+require 'active_record_ext/multi_db_server_threadsafe_ext' # require the override file to activerecord.
 require 'active_support/core_ext/object/blank'
 require 'forwardable'
 

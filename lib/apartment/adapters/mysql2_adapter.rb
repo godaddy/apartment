@@ -3,8 +3,6 @@ module Apartment
   module Database
 
     def self.mysql2_adapter(config)
-      Apartment.use_schemas ?
-        Adapters::Mysql2SchemaAdapter.new(config) :
         Adapters::Mysql2Adapter.new(config)
     end
   end
@@ -19,56 +17,28 @@ module Apartment
       #   Abstract adapter will catch generic ActiveRecord error
       #   Catch specific adapter errors here
       #
-      #   @param {hash} database, :database, :host.
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
       #   ---------------------------------------
-      #   Here "super" just pass the call to the parent class.
-      def connect_to_new(database_config = nil)
-        super
-      rescue Mysql2::Error
+      def connect_to_new(database_config)
+
+        puts "Thread# in connect_to_new is : #{Thread.current.object_id}"
+
+        # Step1: using establish_connection to retrive/start a connection to the db server.
+        default_database_config = database_config.clone.tap do |config|
+          config[:database] = DEFAULT_DB          
+        end
+        Apartment.establish_connection default_database_config
+
+        # Step2: use "USE" to connect to the desired databse.
+        Apartment.connection.execute "USE #{database_config[:database]}"
+
+      rescue Mysql2::Error, ActiveRecord::StatementInvalid
         Apartment::Database.reset
-        raise DatabaseNotFound, "Cannot find database #{environmentify(database)}"
-      end
-    end
-
-    class Mysql2SchemaAdapter < AbstractAdapter
-      attr_reader :default_database
-
-      def initialize(config)
-        @default_database = config[:database]
-
-        super
+        raise DatabaseNotFound, "Cannot find database #{database_config[:database]}"
       end
 
-      #   Reset current_database to the default_database
-      #
-      def reset
-        Apartment.connection.execute "use #{default_database}"
-      end
-
-      #   Set the table_name to always use the default database for excluded models
-      #
-      def process_excluded_models
-        Apartment.excluded_models.each{ |model| process_excluded_model(model) }
-      end
-
-    protected
-
-      #   Set schema current_database to new db
-      #
-      def connect_to_new(database_config = nil)
-        
-        return reset if database_config.nil?
-
-        super
-        # Pass the call to super instead of fireing use command now, 
-        #   since database might exist in different server. 
-        # Apartment.connection.execute "USE #{environmentify(database_config[:database])}"
-
-      rescue ActiveRecord::StatementInvalid
-        Apartment::Database.reset
-        raise DatabaseNotFound, "Cannot find database #{environmentify(database_config[:database])}"
-      end
-
+      #   TODO: Not sure if we need this method anymore, may delete it later.
       def process_excluded_model(model)
         model.constantize.tap do |klass|
           # some models (such as delayed_job) seem to load and cache their column names before this,
@@ -82,6 +52,7 @@ module Apartment
           klass.table_name = "#{default_database}.#{table_name}"
         end
       end
+
     end
   end
 end

@@ -1,41 +1,44 @@
 require 'active_record'
+require 'thread'
 
 module Apartment
   module Adapters
     class AbstractAdapter
 
-      #   @constructor
-      #   @param {Hash} config Database config
-      #   ------------------------------------------------------
-      #   Basically, config is the info in database in yml file.
-      #   Example of what @config might be: 
-      #           {:adapter=>"mysql2", 
-      #            :encoding=>"utf8", 
-      #            :reconnect=>false, 
-      #            :database=>"spree", 
-      #            :pool=>5, 
-      #            :username=>"root", 
-      #            :password=>nil, 
-      #            :host=>"127.0.0.1", 
-      #            :port=>3306}
+      # Constant holding the default database, 
+      #   since ActiveRecord cannot connect to a database server
+      #      without connecting to a database on it.
+      # TODO: We might be able to find a better way.
+      DEFAULT_DB = "information_schema"
+
+      #  @constructor
+      #  @param {Hash} config Database config
+      #  ------------------------------------------------------
+      #  Example of what @config might be: 
+      #          {:adapter=>"mysql2", 
+      #           :encoding=>"utf8", 
+      #           :reconnect=>false, 
+      #           :database=>"nemo", 
+      #           :pool=>5, 
+      #           :username=>"root", 
+      #           :password=>nil, 
+      #           :host=>"127.0.0.1", 
+      #           :port=>3306}
       def initialize(config)
         @config = config
       end
 
       #   Create a new database, import schema, seed if appropriate
-      #
-      #   @param {hash} database_info, :database, :host, :default_db
-      #   -------------------------------------------------------
-      #   Will call create_database function in this file to do the actual job.
-      def create(database_info)
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
+      #   --------------------------------------------------------
+      def create(database_config)
 
-        puts "Creating databse with db_info:"
-        puts "#{database_info}"
+        puts "Creating databse with database_config:"
+        puts "#{database_config}"
 
-        create_database(database_info)
+        create_database(database_config)
 
-        database_config = database_info.clone.tap {|config| config[:default_db] = nil}
-        
         # Swich to created new db and do stuff, like seed, then switch back to cur db.
         process(database_config) do
           import_database_schema
@@ -50,18 +53,17 @@ module Apartment
         puts "#{current_database}"
       end
 
+      ## TODO: need to double check the returned value.
       #   Get the current database name
       #
-      #   @return {hash} current database's config, :database, :host
+      #   @return {Hash} current database's config
       #   ---------------------------------------
-      #   See file lib/apartment.rb
-      #   The body is equivalent as
-      #
-      #   ActiveRecord::Base.connection.current_database
-      #
-      #   If you do not set any :connection_class
       def current_database
-        Apartment.connection.instance_variable_get(:@config).clone
+        # @config will return the last spec in establish_connection.
+        # We need to update the :database to current_database from DEFAULT_DB
+        Apartment.connection.instance_variable_get(:@config).clone.tap do |config|
+          config[:database] = current_database_name
+        end
       end
 
       # return {string}, name of the current database
@@ -75,28 +77,29 @@ module Apartment
         current_database
       end
 
-      #   TODO: MODIFY DROP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       #   Drop the database
       #
-      #   @param {String} database Database name
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
       #   --------------------------------------
-      #   See file lib/apartment.rb
-      #   The body is equivalent as
-      #
-      #   ActiveRecord::Base.connection.execute("DROP DATABASE #{environmentify(database)}" )
-      #
-      #   If you do not set any :connection_class
-      def drop(database)
+      def drop(database_config)
         # Apartment.connection.drop_database   note that drop_database will not throw an exception, so manually execute
-        Apartment.connection.execute("DROP DATABASE #{environmentify(database)}" )
+        
+        # 1. Connect to the correct database server.
+        default_database_config = database_config.clong.tap {|config| config[:database] = DEFAULT_DB}
+        Apartment.establish_connection default_database_config
+
+        # 2. Drop the target database.
+        Apartment.connection.execute("DROP DATABASE #{database_config[:database]}" )
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{environmentify(database)} cannot be found"
+        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found"
       end
 
       #   Connect to db, do your biz, switch back to previous db
-      #
-      #   @param {hash} database_config, :database, :host
+      #   --------------------------------------------------------
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
       #
       def process(database_config = nil)
         current_db = current_database
@@ -109,6 +112,7 @@ module Apartment
         switch(current_db) rescue reset
       end
 
+      #   TODO: Not sure if we need this method anymore, may delete it later.
       #   Establish a new connection for each specific excluded model
       #   ------------------------------------------------------------
       #   Because a model will inherit from ActiveRecord::Base, the model will
@@ -123,23 +127,19 @@ module Apartment
         end
       end
 
+      ## TODO: We might need to find a better solution in case of reset.
+      ## Current logic just connect to the default config, which should be defined in the database.yml file.
       #   Reset the database connection to the default
       #   --------------------------------------
-      #   See file lib/apartment.rb
-      #   The body is equivalent as
-      #
-      #   ActiveRecord::Base.establish_connection @config
-      #
-      #   If you do not set any :connection_class
       def reset
         Apartment.establish_connection @config
       end
 
       #   Switch to new connection (or schema if appopriate)
       #
-      #   @param {hash} database_config, :database, :host
+      #   @param {Hash} database_config, :database, :host
       #   ------------------------------------------------
-      #   Some doc on .tap method, it is interesting.
+      #   Doc on .tap method.
       #   http://apidock.com/rails/Object/tap
       def switch(database_config = nil)
         # Just connect to default db and return
@@ -164,41 +164,42 @@ module Apartment
 
       #   Create the database
       #
-      #   @param {hash} database_info, :database, :host, :default_server
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
       #   --------------------------------------
-      #   See file lib/apartment.rb
-      #   The body is equivalent as
-      #
-      #   ActiveRecord::Base.connection.create_database( environmentify(database) )
-      #
-      #   If you do not set any :connection_class
-      def create_database(database_info)
+      def create_database(database_config)
 
-        default_database_config = database_info.clone.tap do |config|
-          config[:database] = database_info[:default_db]          
+        default_database_config = database_config.clone.tap do |config|
+          config[:database] = DEFAULT_DB          
         end
+        puts "default_database_config in create_db:"
+        puts "#{default_database_config}"
 
+        puts "current_db in create_db:"
+        puts "#{current_database}"
         process(default_database_config) do
-          Apartment.connection.create_database( environmentify(database_info[:database]) )
+          Apartment.connection.create_database database_config[:database]
         end
 
       rescue *rescuable_exceptions
-        raise DatabaseExists, "The database #{environmentify(database_info[:database])} already exists."
+        raise DatabaseExists, "The database #{database_config[:database]} already exists."
       end
 
       #   Connect to new database
-      #
-      #   @param {hash} database_config, :database, :host
-      #   -----------------------------------------------
-      #   See file lib/apartment.rb
+      #   @param {Hash} database_config, 
+      #         complete info of a database, :database, :host, ...
+      #   --------------------------------------
+      #   THIS METHOD IS OVERWRITE IN lib/adapters/mysql2_adapter.rb
+      #   To do the "connect to db server, use correct db" trick.
       def connect_to_new(database_config)
-        Apartment.establish_connection multi_tenantify(database_config)
+        Apartment.establish_connection database_config
         Apartment.connection.active?   # call active? to manually check if this connection is valid
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{environmentify(database_config[:database])} cannot be found."
+        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found."
       end
 
+      #   TODO: We can delete this method since our naming logic is not implemented here.
       #   Prepend the environment if configured and the environment isn't already there
       #
       #   @param {String} database Database name
@@ -226,6 +227,7 @@ module Apartment
         load_or_abort(Apartment.database_schema_file) if Apartment.database_schema_file
       end
 
+      #   TODO: This method should be deprecated since we provide complete database config.
       #   Return a new config that is multi-tenanted
       #   
       #   NOTICE: This method could become dummy 

@@ -10,7 +10,7 @@ Apartment.configure do |config|
   }
 
   # use postgres schemas?
-  config.use_schemas = false
+  config.use_schemas = true
 
   # configure persistent schemas (E.g. hstore )
   # config.persistent_schemas = %w{ hstore }
@@ -32,5 +32,4 @@ end
 # }
 
 # Rails.application.config.middleware.use 'Apartment::Elevators::Domain'
-
 Rails.application.config.middleware.use 'Apartment::Elevators::Subdomain'
