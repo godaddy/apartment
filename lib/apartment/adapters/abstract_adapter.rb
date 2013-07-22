@@ -1,5 +1,4 @@
 require 'active_record'
-require 'thread'
 
 module Apartment
   module Adapters
@@ -53,7 +52,6 @@ module Apartment
         puts "#{current_database}"
       end
 
-      ## TODO: need to double check the returned value.
       #   Get the current database name
       #
       #   @return {Hash} current database's config
@@ -172,11 +170,7 @@ module Apartment
         default_database_config = database_config.clone.tap do |config|
           config[:database] = DEFAULT_DB          
         end
-        puts "default_database_config in create_db:"
-        puts "#{default_database_config}"
 
-        puts "current_db in create_db:"
-        puts "#{current_database}"
         process(default_database_config) do
           Apartment.connection.create_database database_config[:database]
         end
