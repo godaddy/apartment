@@ -1,3 +1,8 @@
+=begin
+  These rake tasks need to be updated if we decide put logic of migration in apartment.
+  Otherwise, should be deleted.
+=end
+
 apartment_namespace = namespace :apartment do
 
   desc "Create all multi-tenant databases"
