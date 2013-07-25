@@ -22,8 +22,6 @@ module Apartment
       #   ---------------------------------------
       def connect_to_new(database_config)
 
-        puts "Thread# in connect_to_new is : #{Thread.current.object_id}"
-
         # Step1: using establish_connection to retrive/start a connection to the db server.
         default_database_config = database_config.clone.tap do |config|
           config[:database] = DEFAULT_DB          

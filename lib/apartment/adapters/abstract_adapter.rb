@@ -9,6 +9,8 @@ module Apartment
       #      without connecting to a database on it.
       # TODO: We might be able to find a better way.
       DEFAULT_DB = "information_schema"
+      
+      @@debug = false
 
       #  @constructor
       #  @param {Hash} config Database config
@@ -31,16 +33,16 @@ module Apartment
       #   @param {Hash} database_config, 
       #         complete info of a database, :database, :host, ...
       #   --------------------------------------------------------
-      def create(database_config)
+      def create(database_config, import_schema=true)
 
-        puts "Creating databse with database_config:"
-        puts "#{database_config}"
+        puts "Creating databse with database_config:" if @@debug
+        puts "#{database_config}" if @@debug
 
         create_database(database_config)
 
         # Swich to created new db and do stuff, like seed, then switch back to cur db.
         process(database_config) do
-          import_database_schema
+          import_database_schema if import_schema
 
           # Seed data if appropriate
           seed_data if Apartment.seed_after_create
@@ -48,8 +50,8 @@ module Apartment
           yield if block_given?
         end
 
-        puts "Creating finished, now in database:"
-        puts "#{current_database}"
+        puts "Creating finished, now in database:" if @@debug
+        puts "#{current_database}" if @@debug
       end
 
       #   Get the current database name

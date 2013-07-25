@@ -48,7 +48,6 @@ module Apartment
           raise AdapterNotFound, "database configuration specifies nonexistent #{config[:adapter]} adapter"
         end
 
-        puts "adapter_method is: #{adapter_method}"
         send(adapter_method, config)
       end
     end
