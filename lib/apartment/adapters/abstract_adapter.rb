@@ -67,6 +67,11 @@ module Apartment
         end
       end
 
+      # return {string}, name of the current database
+      def current_database_name
+        Apartment.connection_config[:database]
+      end
+
       #   Note alias_method here doesn't work with inheritence apparently ??
       #
       def current
