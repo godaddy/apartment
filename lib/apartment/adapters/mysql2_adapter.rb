@@ -35,6 +35,16 @@ module Apartment
         Apartment::Database.reset
         raise DatabaseNotFound, "Cannot find database #{database_config[:database]}"
       end
+      
+      # return {string}, name of the current database
+      def current_database_name
+        # In the release of rails 3.2.14 rc2, 
+        # ActiveRecord::Base.connection.current_database becomes a private method.
+        # Apartment.connection.current_database # 3.2.13
+      
+        # 3.2.14 # Running MySql command directly to retrive the current used db name.
+        Apartment.connection.select_value 'SELECT DATABASE() as db'
+      end
 
       #   TODO: Not sure if we need this method anymore, may delete it later.
       def process_excluded_model(model)

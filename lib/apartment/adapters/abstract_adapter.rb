@@ -61,14 +61,10 @@ module Apartment
       def current_database
         # @config will return the last spec in establish_connection.
         # We need to update the :database to current_database from DEFAULT_DB
+
         Apartment.connection.instance_variable_get(:@config).clone.tap do |config|
           config[:database] = current_database_name
         end
-      end
-
-      # return {string}, name of the current database
-      def current_database_name
-        Apartment.connection.current_database
       end
 
       #   Note alias_method here doesn't work with inheritence apparently ??
