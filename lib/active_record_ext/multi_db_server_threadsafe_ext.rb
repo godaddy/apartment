@@ -8,33 +8,28 @@ if defined?(ActiveRecord)
       class ConnectionHandler
 
         @@debug = false
-        @@sleep_time = 0.2
 
         def establish_connection(name, spec)
           thread_id = Thread.current.object_id
 
           puts "Thread# in establish_connection: #{thread_id}" if @@debug
-          puts "Spec.config in establish_connection is: " #if @@debug
-          puts "#{spec.config}" #if @@debug
+          puts "Spec.config in establish_connection is: " if @@debug
+          puts "#{spec.config}" if @@debug
 
-          @connection_pools[spec.config] = @connection_pools[spec.config] || ConnectionAdapters::ConnectionPool.new(spec)
+          # Use, host and database name as the unique key to each connection_pool,
+          #   notice we are creating connection pool to each database *server*.
+          connection_pool_key = {:host => spec.config[:host], 
+                                 :database => spec.config[:database]}
 
-          # Generate an array with first value being the thread id, and second value being time_stamp.
-          key = [thread_id, time_stamp]
+          # Create one if connection_pool to this database server hasn't been created yet.
+          if @connection_pools[connection_pool_key].nil?
+            @connection_pools[connection_pool_key] = ConnectionAdapters::ConnectionPool.new(spec)
+          end
 
           unless @class_to_pool[name] == nil
-            @class_to_pool[name][key] = @connection_pools[spec.config]
+            @class_to_pool[name][thread_id] = @connection_pools[connection_pool_key]
           else
-            @class_to_pool[name] = {key => @connection_pools[spec.config]}
-          end
-        rescue RuntimeError => e
-          # If catch an hash iteration error, pause for @@sleep_time seconds.
-          if e.message == "can't add a new key into hash during iteration"
-            sleep @@sleep_time
-            puts "[RESCUE] Catch error: #{e.message}"
-            self.establish_connection(name, spec)
-          else
-            raise e
+            @class_to_pool[name] = {thread_id => @connection_pools[connection_pool_key]}
           end
         end
   
@@ -45,31 +40,23 @@ if defined?(ActiveRecord)
 
           unless @class_to_pool[klass.name] == nil
 
-            # Iterate through each key, value pair of this class's value (key => coon)
-            # If this coon has current thread as first part of its key, remove this coon.
-            # If not, but this coon is established more than 10 seconds ago, remove this coon. * So for sure this thread is not currently being used.
-            @class_to_pool[klass.name].each do |thread_time, conn|
-              if thread_time[0] == thread_id
-                pool = @class_to_pool[klass.name].delete(thread_time)
-                removed_config = pool.spec.config
-                remove_conn pool
-              else
-                if (Time.now.to_i-thread_time[1]) > 10
-                  pool = @class_to_pool[klass.name].delete(thread_time)
-                  remove_conn pool
-                end
-              end
-            end
+            pool = @class_to_pool[klass.name].delete(thread_id)
 
-            # Return the config should be done in both cases.
-            removed_config if defined? (removed_config)
+            unless pool.nil?
+              removed_config = pool.spec.config
+              if @class_to_pool[klass.name].nil? || @class_to_pool[klass.name].empty? # Remove the coon_pool if no other thread is using it.
+                remove_conn pool
+              end
+
+              removed_config
+            end
           end
         end
 
         # Delete current coon from connection_pools and disconnect it.  
         def remove_conn(pool)
           puts "[REMOVE] Remove connection: #{pool.spec.config}" if @@debug
-          @connection_pools.delete pool.spec.config
+          @connection_pools.delete pool.spec.config[:host]
           pool.automatic_reconnect = false
           pool.disconnect!
         end
@@ -79,14 +66,8 @@ if defined?(ActiveRecord)
           puts "Thread# in retrive_conenction_pool #{thread_id}" if @@debug
 
           unless @class_to_pool[klass.name].nil?
-            pool = nil
 
-            @class_to_pool[klass.name].each do |thread_time, coon|
-              if thread_time[0] == thread_id
-                pool = coon
-                break
-              end
-            end 
+            pool = @class_to_pool[klass.name][thread_id]
 
             return pool if pool != nil
             return nil if ActiveRecord::Base == klass
@@ -106,11 +87,6 @@ if defined?(ActiveRecord)
           puts "----------------------------"
           puts "klass name is #{klass.name}"
           raise e
-        end
-
-        # Return the unix time stamp.
-        def time_stamp
-          Time.now.to_i
         end
 
       end
