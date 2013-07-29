@@ -51,6 +51,8 @@ if defined?(ActiveRecord)
 
           unless @class_to_pool[klass.name].nil?
 
+            # Here, only mapping is deleted, but no actual pool is disconnected.
+            #   The reason is that we want to keep that pool since it is connect to db server, not a specific db.
             pool = @class_to_pool[klass.name][thread_id]
 
             return pool if pool != nil
