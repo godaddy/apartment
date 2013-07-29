@@ -39,26 +39,10 @@ if defined?(ActiveRecord)
           puts "Thread# in remove_connection is #{thread_id}" if @@debug
 
           unless @class_to_pool[klass.name] == nil
-
+            puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" if @@debug
             pool = @class_to_pool[klass.name].delete(thread_id)
-
-            unless pool.nil?
-              removed_config = pool.spec.config
-              if @class_to_pool[klass.name].nil? || @class_to_pool[klass.name].empty? # Remove the coon_pool if no other thread is using it.
-                remove_conn pool
-              end
-
-              removed_config
-            end
+            pool.spec.config unless pool.nil?
           end
-        end
-
-        # Delete current coon from connection_pools and disconnect it.  
-        def remove_conn(pool)
-          puts "[REMOVE] Remove connection: #{pool.spec.config}" if @@debug
-          @connection_pools.delete pool.spec.config[:host]
-          pool.automatic_reconnect = false
-          pool.disconnect!
         end
 
         def retrieve_connection_pool(klass)
