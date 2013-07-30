@@ -32,16 +32,20 @@ if defined?(ActiveRecord)
             @class_to_pool[name] = {thread_id => @connection_pools[connection_pool_key]}
           end
         end
-  
-        def remove_connection(klass)
 
+        # Notice remove_connection does NOT actually disconnect connection pool.
+        #  Since we build the connection pool to a database SERVER, we want to keep it open for later use.
+        #  Thus, remove_connection here only removes the thread => coon_pool mapping.
+        def remove_connection(klass)
           thread_id = Thread.current.object_id
           puts "Thread# in remove_connection is #{thread_id}" if @@debug
-
           unless @class_to_pool[klass.name] == nil
-            puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" if @@debug
             pool = @class_to_pool[klass.name].delete(thread_id)
-            pool.spec.config unless pool.nil?
+            unless  pool.nil?
+              puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" #if @@debug
+              puts "@class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}" #if @@debug
+              pool.spec.config
+            end
           end
         end
 

@@ -23,17 +23,14 @@ module Apartment
       def connect_to_new(database_config)
 
         # Step1: using establish_connection to retrive/start a connection to the db server.
-        default_database_config = database_config.clone.tap do |config|
-          config[:database] = DEFAULT_DB          
-        end
-        Apartment.establish_connection default_database_config
+        Apartment.establish_connection database_config
 
-        # Step2: use "USE" to connect to the desired databse.
-        Apartment.connection.execute "USE #{database_config[:database]}"
+        # Step2: use "USE" to connect to the desired database.
+        Apartment.connection.execute "USE #{database_config[:merchant_database]}"
 
       rescue Mysql2::Error, ActiveRecord::StatementInvalid
         Apartment::Database.reset
-        raise DatabaseNotFound, "Cannot find database #{database_config[:database]}"
+        raise DatabaseNotFound, "Cannot find database #{database_config[:merchant_database]}"
       end
       
       # return {string}, name of the current database

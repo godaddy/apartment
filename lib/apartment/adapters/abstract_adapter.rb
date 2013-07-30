@@ -150,6 +150,7 @@ module Apartment
         connect_to_new(database_config).tap do
           ActiveRecord::Base.connection.clear_query_cache
         end
+
       end
 
       #   Load the rails seed file into the db
@@ -170,13 +171,16 @@ module Apartment
       #   --------------------------------------
       def create_database(database_config)
 
-        default_database_config = database_config.clone.tap do |config|
-          config[:database] = DEFAULT_DB          
+        # Simple hack to let connection use default database for creation process.
+        merchant_database = database_config[:merchant_database]
+        database_config[:merchant_database] = DEFAULT_DB
+
+        process(database_config) do
+          Apartment.connection.create_database merchant_database
         end
 
-        process(default_database_config) do
-          Apartment.connection.create_database database_config[:database]
-        end
+        # Change the configuration back.
+        database_config[:merchant_database] = merchant_database
 
       rescue *rescuable_exceptions
         raise DatabaseExists, "The database #{database_config[:database]} already exists."
