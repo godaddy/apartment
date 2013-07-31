@@ -42,8 +42,8 @@ if defined?(ActiveRecord)
           unless @class_to_pool[klass.name] == nil
             pool = @class_to_pool[klass.name].delete(thread_id)
             unless  pool.nil?
-              puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" #if @@debug
-              puts "@class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}" #if @@debug
+              puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" if @@debug
+              puts "@class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}" if @@debug
               pool.spec.config
             end
           end
