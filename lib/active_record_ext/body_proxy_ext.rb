@@ -16,7 +16,7 @@ module ActiveRecord
         
         # ADD ONE MORE STATEMENT HERE.
         # remove the thread => pool mapping created for this request.
-        ActiveRecord::Base.remove_connection
+        ActiveRecord::Base.connection_handler.remove_thread_pool_mapping(ActiveRecord::Base)
       end
     end
   end

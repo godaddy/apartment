@@ -18,32 +18,38 @@ if defined?(ActiveRecord)
 
           # Use, host and database name as the unique key to each connection_pool,
           #   notice we are creating connection pool to each database *server*.
-          connection_pool_key = {:host => spec.config[:host], 
-                                 :database => spec.config[:database]}
+          connection_pool_key = get_connection_pools_key(spec.config)
 
           # Create one if connection_pool to this database server hasn't been created yet.
-          if @connection_pools[connection_pool_key].nil?
-            @connection_pools[connection_pool_key] = ConnectionAdapters::ConnectionPool.new(spec)
-          end
+          @connection_pools[connection_pool_key] ||= ConnectionAdapters::ConnectionPool.new(spec)
 
-          unless @class_to_pool[name] == nil
-            @class_to_pool[name][thread_id] = @connection_pools[connection_pool_key]
-          else
+          if @class_to_pool[name].nil?
             @class_to_pool[name] = {thread_id => @connection_pools[connection_pool_key]}
+          else
+            @class_to_pool[name][thread_id] = @connection_pools[connection_pool_key]
           end
         end
 
+        ## TODO [FINISHED WAITING FOR REVIEW]:
+        ## Actually Kill the pool when no other thread
+        ##     using the same pool.
+        # -----------------------------------------------------------------------------------
         # Notice remove_connection does NOT actually disconnect connection pool.
         #  Since we build the connection pool to a database SERVER, we want to keep it open for later use.
         #  Thus, remove_connection here only removes the thread => coon_pool mapping.
         def remove_connection(klass)
           thread_id = Thread.current.object_id
           puts "Thread# in remove_connection is #{thread_id}" if @@debug
+
           unless @class_to_pool[klass.name] == nil
             pool = @class_to_pool[klass.name].delete(thread_id)
             unless  pool.nil?
-              puts "[REMOVE] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" if @@debug
+              puts "[REMOVE MAPPING] Remove connection mapping: #{klass.name} => #{thread_id} => #{pool.spec.config}" if @@debug
               puts "@class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}" if @@debug
+
+              # Actually kill the connection pool if no other thread is using it.
+              kill_connection_pool(pool) unless @class_to_pool[klass.name].has_value? pool
+
               pool.spec.config
             end
           end
@@ -53,22 +59,14 @@ if defined?(ActiveRecord)
           thread_id = Thread.current.object_id
           puts "Thread# in retrive_conenction_pool #{thread_id}" if @@debug
 
-          unless @class_to_pool[klass.name].nil?
+          pool = @class_to_pool[klass.name].try :fetch, thread_id, nil
 
-            # Here, only mapping is deleted, but no actual pool is disconnected.
-            #   The reason is that we want to keep that pool since it is connect to db server, not a specific db.
-            pool = @class_to_pool[klass.name][thread_id]
+          return pool if pool
+          return nil if ActiveRecord::Base == klass
 
-            return pool if pool != nil
-            return nil if ActiveRecord::Base == klass
-
-            # Even if the it goes to the superclass, 
-            #   the logic will only look in the corresponding thread_id.
-            retrieve_connection_pool klass.superclass
-          else
-            return nil if ActiveRecord::Base == klass
-            retrieve_connection_pool klass.superclass
-          end
+          # Even if the it goes to the superclass, 
+          #   the logic will only look in the corresponding thread_id.
+          retrieve_connection_pool klass.superclass
 
         rescue Exception => e
           puts "Current Thread is is: #{thread_id}"
@@ -77,6 +75,32 @@ if defined?(ActiveRecord)
           puts "----------------------------"
           puts "klass name is #{klass.name}"
           raise e
+        end
+
+        # TODO [FINISHED WAITING FOR REVIEW]: 
+        # Add another remove mapping method.
+        def remove_thread_pool_mapping(klass)
+          thread_id = Thread.current.object_id
+          puts "Thread# in remove_thread_pool_mapping is #{thread_id}" if @@debug
+          @class_to_pool[klass.name].delete(thread_id) unless @class_to_pool[klass.name] == nil
+          puts "[REMOVE MAPPING] @class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}"# if @@debug
+        end
+
+        private
+        # Delete the pool from connection_pools and disconnect it.  
+        def kill_connection_pool(pool)
+          puts "[KILL] Kill connection_pool: #{pool.spec.config}" if @@debug
+          @connection_pools.delete get_connection_pools_key(pool.spec.config)
+          pool.automatic_reconnect = false
+          pool.disconnect!
+        end
+
+        # Get the key of connection_pools based on the input database config.
+        def get_connection_pools_key(config)
+          {
+            :host => config[:host], 
+            :database => config[:database]
+          }
         end
 
       end
