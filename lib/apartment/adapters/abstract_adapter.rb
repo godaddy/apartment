@@ -10,7 +10,7 @@ module Apartment
       # TODO: We might be able to find a better way.
       DEFAULT_DB = "information_schema"
       
-      @@debug = true
+      @@debug = false
 
       #  @constructor
       #  @param {Hash} config Database config
@@ -184,7 +184,7 @@ module Apartment
         # Change the configuration back.
         database_config[:merchant_database] = merchant_database
       rescue *rescuable_exceptions
-        raise DatabaseExists, "The database #{database_config[:database]} already exists."
+        raise DatabaseExists, "The database #{merchant_database} already exists."
       end
 
       #   Connect to new database
