@@ -26,13 +26,13 @@ module Apartment
         Apartment.establish_connection database_config
 
         # Step2: use "USE" to connect to the desired database.
-        unless database_config[:merchant_database].nil? # the only situation that :merchant_database is nil that database_config is the dummy default config.
-          Apartment.connection.execute "USE #{database_config[:merchant_database]}"
+        unless database_config[:target_database].nil? # the only situation that :target_database is nil that database_config is the dummy default config.
+          Apartment.connection.execute "USE #{database_config[:target_database]}"
         end
 
       rescue Mysql2::Error, ActiveRecord::StatementInvalid
         Apartment::Database.reset
-        raise DatabaseNotFound, "Cannot find database #{database_config[:merchant_database]}"
+        raise DatabaseNotFound, "Cannot find database #{database_config[:target_database]}"
       end
       
       # return {string}, name of the current database

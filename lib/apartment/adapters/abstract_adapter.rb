@@ -172,19 +172,19 @@ module Apartment
       def create_database(database_config)
 
         # Simple hack to let connection use default database for creation process.
-        merchant_database = database_config[:merchant_database]
-        database_config[:merchant_database] = DEFAULT_DB
+        target_database = database_config[:target_database]
+        database_config[:target_database] = DEFAULT_DB
 
-        puts "merchant_database in create_database is: #{merchant_database}" if @@debug
+        puts "target_database in create_database is: #{target_database}" if @@debug
 
         process(database_config) do
-          Apartment.connection.create_database merchant_database
+          Apartment.connection.create_database target_database
         end
 
         # Change the configuration back.
-        database_config[:merchant_database] = merchant_database
+        database_config[:target_database] = target_database
       rescue *rescuable_exceptions
-        raise DatabaseExists, "The database #{merchant_database} already exists."
+        raise DatabaseExists, "The database #{target_database} already exists."
       end
 
       #   Connect to new database
