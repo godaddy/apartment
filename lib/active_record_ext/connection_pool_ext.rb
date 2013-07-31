@@ -30,13 +30,8 @@ if defined?(ActiveRecord)
           end
         end
 
-        ## TODO [FINISHED WAITING FOR REVIEW]:
-        ## Actually Kill the pool when no other thread
-        ##     using the same pool.
-        # -----------------------------------------------------------------------------------
-        # Notice remove_connection does NOT actually disconnect connection pool.
-        #  Since we build the connection pool to a database SERVER, we want to keep it open for later use.
-        #  Thus, remove_connection here only removes the thread => coon_pool mapping.
+        # remove_connection will remove the thread => pool mapping, and actually kill the connection_pool
+        #   if no other thread is using it.
         def remove_connection(klass)
           thread_id = Thread.current.object_id
           puts "Thread# in remove_connection is #{thread_id}" if @@debug
@@ -77,8 +72,7 @@ if defined?(ActiveRecord)
           raise e
         end
 
-        # TODO [FINISHED WAITING FOR REVIEW]: 
-        # Add another remove mapping method.
+        # ONLY remove the thread => pool mapping.
         def remove_thread_pool_mapping(klass)
           thread_id = Thread.current.object_id
           puts "Thread# in remove_thread_pool_mapping is #{thread_id}" if @@debug
@@ -87,6 +81,7 @@ if defined?(ActiveRecord)
         end
 
         private
+        
         # Delete the pool from connection_pools and disconnect it.  
         def kill_connection_pool(pool)
           puts "[KILL] Kill connection_pool: #{pool.spec.config}" if @@debug
