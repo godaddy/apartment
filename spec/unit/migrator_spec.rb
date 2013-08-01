@@ -1,3 +1,12 @@
+=begin
+
+
+This rspec is commented out since the current apartment migrator is not what we want.
+  If we decide use apartment to do the migration, we need to update the rake task  and rspec test here.
+
+rake task file: apartment/lib/tasks/apartment.rake
+
+
 require 'spec_helper'
 
 describe Apartment::Migrator do
@@ -87,3 +96,5 @@ describe Apartment::Migrator do
   end
 
 end
+
+=end

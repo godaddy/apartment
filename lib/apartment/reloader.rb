@@ -15,7 +15,7 @@ module Apartment
     end
 
     def call(env)
-      Database.init
+      # Database.init
       @app.call(env)
     end
 

@@ -77,7 +77,7 @@ if defined?(ActiveRecord)
           thread_id = Thread.current.object_id
           puts "Thread# in remove_thread_pool_mapping is #{thread_id}" if @@debug
           @class_to_pool[klass.name].delete(thread_id) unless @class_to_pool[klass.name] == nil
-          puts "[REMOVE MAPPING] @class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}"# if @@debug
+          puts "[REMOVE MAPPING] @class_to_pool[#{klass.name}].length is : #{@class_to_pool[klass.name].length}" if @@debug
         end
 
         private

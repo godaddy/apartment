@@ -4,7 +4,6 @@
 This file has not been updated to work with multiple database servers.
 !!!WARNING!!!
 
-=end
 
 module Apartment
 
@@ -34,3 +33,5 @@ module Apartment
     end
   end
 end
+
+=end

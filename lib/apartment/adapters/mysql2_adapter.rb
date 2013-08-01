@@ -11,6 +11,13 @@ module Apartment
 
     class Mysql2Adapter < AbstractAdapter
 
+      def process_excluded_models
+        Apartment.excluded_models.each do |excluded_model|
+          puts "[EXCLUDED] Build connection for #{excluded_model}" if @@debug
+          excluded_model.constantize.build_connection
+        end
+      end
+
     protected
 
       #   Connect to new database
@@ -43,21 +50,6 @@ module Apartment
       
         # 3.2.14 # Running MySql command directly to retrive the current used db name.
         Apartment.connection.select_value 'SELECT DATABASE() as db'
-      end
-
-      #   TODO: Not sure if we need this method anymore, may delete it later.
-      def process_excluded_model(model)
-        model.constantize.tap do |klass|
-          # some models (such as delayed_job) seem to load and cache their column names before this,
-          # so would never get the default prefix, so reset first
-          klass.reset_column_information
-
-          # Ensure that if a schema *was* set, we override
-          table_name = klass.table_name.split('.', 2).last
-
-          # Not sure why, but Delayed::Job somehow ignores table_name_prefix...  so we'll just manually set table name instead
-          klass.table_name = "#{default_database}.#{table_name}"
-        end
       end
 
     end

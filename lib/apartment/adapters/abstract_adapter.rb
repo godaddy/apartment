@@ -113,14 +113,7 @@ module Apartment
         switch(current_db) rescue reset
       end
 
-      #   TODO: Not sure if we need this method anymore, may delete it later.
       #   Establish a new connection for each specific excluded model
-      #   ------------------------------------------------------------
-      #   Because a model will inherit from ActiveRecord::Base, the model will
-      #   have a method establish_connection defined in AR::Base class.
-      #
-      #   The logic of this method is that for those exluded_models, connection to 
-      #   default/common db first, then do the business.
       def process_excluded_models
         # All other models will shared a connection (at Apartment.connection_class) and we can modify at will
         Apartment.excluded_models.each do |excluded_model|

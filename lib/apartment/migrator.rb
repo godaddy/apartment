@@ -1,7 +1,6 @@
 =begin
   The migrator logic needs to be updated if we decide put logic of migration in apartment.
   Otherwise, should be deleted.
-=end
 
 module Apartment
 
@@ -30,3 +29,4 @@ module Apartment
   end
 
 end
+=end

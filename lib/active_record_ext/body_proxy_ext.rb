@@ -16,9 +16,12 @@ if defined?(ActiveRecord)
             ActiveRecord::Base.connection.disable_query_cache!
           end
           
-          # ADD ONE MORE STATEMENT HERE.
           # remove the thread => pool mapping created for this request.
           ActiveRecord::Base.connection_handler.remove_thread_pool_mapping(ActiveRecord::Base)
+
+          Apartment.excluded_models.each do |model|
+            ActiveRecord::Base.connection_handler.remove_thread_pool_mapping(model.constantize)
+          end
         end
       end
     end
