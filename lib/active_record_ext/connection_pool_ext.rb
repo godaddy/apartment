@@ -1,3 +1,4 @@
+=begin
 
 # Original file path:
 # activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb
@@ -108,3 +109,4 @@ end
 
 
 
+=end

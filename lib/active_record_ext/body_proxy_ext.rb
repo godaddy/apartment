@@ -1,3 +1,4 @@
+=begin
 
 # Original file path:
 # activerecord/lib/active_record/query_cache.rb
@@ -30,3 +31,4 @@ if defined?(ActiveRecord)
 
 end
 
+=end
