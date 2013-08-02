@@ -79,22 +79,21 @@ module Apartment
       end
 
       #   Drop the database
-      #
-      #   @param {Hash} database_config, 
-      #         complete info of a database, :database, :host, ...
-      #   --------------------------------------
-      def drop(database_config)
+      def drop!(database_config)
         # Apartment.connection.drop_database   note that drop_database will not throw an exception, so manually execute
         
-        # 1. Connect to the correct database server.
-        default_database_config = database_config.clong.tap {|config| config[:database] = DEFAULT_DB}
-        Apartment.establish_connection default_database_config
+        target_database = database_config[:target_database]
+        database_config[:target_database] = DEFAULT_DB
 
-        # 2. Drop the target database.
-        Apartment.connection.execute("DROP DATABASE #{database_config[:database]}" )
+        process(database_config) do
+          Apartment.connection.execute("DROP DATABASE #{target_database}" )
+        end
+
+        database_config[:target_database] = target_database
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found"
+        database_config[:target_database] = target_database
+        raise DatabaseNotFound, "The database #{target_database} cannot be found"
       end
 
       #   Connect to db, do your biz, switch back to previous db
@@ -177,6 +176,7 @@ module Apartment
         # Change the configuration back.
         database_config[:target_database] = target_database
       rescue *rescuable_exceptions
+        database_config[:target_database] = target_database
         raise DatabaseExists, "The database #{target_database} already exists."
       end
 

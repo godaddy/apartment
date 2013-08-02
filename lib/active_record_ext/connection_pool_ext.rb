@@ -1,3 +1,4 @@
+
 # Original file path:
 # activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb
 
@@ -103,6 +104,7 @@ if defined?(ActiveRecord)
   end
 
 end
+
 
 
 
