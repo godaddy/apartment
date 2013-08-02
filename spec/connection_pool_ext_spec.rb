@@ -1,3 +1,9 @@
+=begin
+
+This rspec is commented out since we do not need to override active record anymore.
+  Besides, the override of active record is also commented out.
+
+
 require_relative 'spec_helper'
 
 module ActiveRecord
@@ -73,3 +79,7 @@ module ActiveRecord
 
   end
 end
+
+
+
+=end
