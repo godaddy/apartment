@@ -18,6 +18,7 @@ describe Apartment::Adapters::Mysql2Adapter do
       before { Apartment.use_schemas = true }
 
       it_should_behave_like "a generic apartment adapter"
+      it_should_behave_like "a connection based apartment adapter"
 
       describe "#default_database" do
         it "should has default_database" do
@@ -35,9 +36,14 @@ describe Apartment::Adapters::Mysql2Adapter do
         end
 
         it "should process model exclusions" do
+          ActiveRecord::Base.establish_connection
+          ActiveRecord::Base.connection.create_database "company"
           Apartment::Database.init
+          
           database = Company.connection.instance_variable_get(:@config)[:database]
-          expect(database).to eq(default_database)
+          expect(database).to eq("company")
+
+          ActiveRecord::Base.connection.execute "DROP DATABASE company"
         end
       end
     end

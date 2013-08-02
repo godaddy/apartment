@@ -46,7 +46,7 @@ module ActiveRecord
         ActiveRecord::Base.connection.execute("USE #{db}")
         
         5.times do
-          sleep 2
+          sleep 1
           name = ActiveRecord::Base.connection.current_database
           expect(name).to eq(db)
         end
@@ -60,7 +60,7 @@ module ActiveRecord
         ActiveRecord::Base.connection.execute("USE #{db}")
         
         5.times do
-          sleep 2
+          sleep 1
           name = ActiveRecord::Base.connection.current_database
           expect(name).to eq(db)
         end
