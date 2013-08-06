@@ -88,15 +88,16 @@ module Apartment
       #   --------------------------------------------------------
       #   @param {Hash} database_config, 
       #         complete info of a database, :database, :host, ...
-      #
-      def process(database_config = nil)
+      #   {Boolean} choose if use USE statement while switching to the database_config
+      def process(database_config = nil, use_use=true)
         current_db = current_database
 
-        switch(database_config)
+        switch(database_config, use_use)
 
         yield if block_given?
 
       ensure
+        # Always use USE while switching back.
         switch(current_db) rescue reset
       end
 
@@ -119,15 +120,16 @@ module Apartment
       #   Switch to new connection (or schema if appopriate)
       #
       #   @param {Hash} database_config, :database, :host
+      #   {Boolean} choose if use USE statement while switching to the database_config
       #   ------------------------------------------------
       #   Doc on .tap method.
       #   http://apidock.com/rails/Object/tap
-      def switch(database_config = nil)
+      def switch(database_config=nil, use_use=true)
         # Just connect to default db and return
 
         return reset if database_config.nil?
 
-        connect_to_new(database_config).tap do
+        connect_to_new(database_config, use_use).tap do
           ActiveRecord::Base.connection.clear_query_cache
         end
 
@@ -153,7 +155,7 @@ module Apartment
 
         puts "target_database in create_database is: #{target_database}" if @@debug
 
-        process(database_config) do
+        process(database_config, false) do
           Apartment.connection.create_database database_config[:target_database]
         end
 
@@ -163,12 +165,13 @@ module Apartment
       end
 
       #   Connect to new database
-      #   @param {Hash} database_config, 
-      #         complete info of a database, :database, :host, ...
+      #   @param 
+      #     {Hash} database_config, complete info of a database, :database, :host, ...
+      #     {Boolean} use_use, if use USE statement. In creation process, we do not want to use use since there is not db to use.
       #   --------------------------------------
       #   THIS METHOD IS OVERWRITE IN lib/adapters/mysql2_adapter.rb
       #   To do the "connect to db server, use correct db" trick.
-      def connect_to_new(database_config)
+      def connect_to_new(database_config, use_use)
         Apartment.establish_connection database_config
         Apartment.connection.active?   # call active? to manually check if this connection is valid
 
