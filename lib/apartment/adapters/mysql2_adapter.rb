@@ -33,7 +33,7 @@ module Apartment
       #   Connect to new database
       #   Abstract adapter will catch generic ActiveRecord error
       #   Catch specific adapter errors here
-      #
+      # => 
       #   @param {Hash} database_config, 
       #         complete info of a database, :database, :host, ...
       #   ---------------------------------------

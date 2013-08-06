@@ -4,12 +4,6 @@ module Apartment
   module Adapters
     class AbstractAdapter
 
-      # Constant holding the default database, 
-      #   since ActiveRecord cannot connect to a database server
-      #      without connecting to a database on it.
-      # TODO: We might be able to find a better way.
-      DEFAULT_DB = "information_schema"
-      
       @@debug = false
 
       #  @constructor
@@ -82,18 +76,12 @@ module Apartment
       def drop!(database_config)
         # Apartment.connection.drop_database   note that drop_database will not throw an exception, so manually execute
         
-        target_database = database_config[:target_database]
-        database_config[:target_database] = DEFAULT_DB
-
         process(database_config) do
-          Apartment.connection.execute("DROP DATABASE #{target_database}" )
+          Apartment.connection.execute("DROP DATABASE #{database_config[:target_database]}" )
         end
 
-        database_config[:target_database] = target_database
-
       rescue *rescuable_exceptions
-        database_config[:target_database] = target_database
-        raise DatabaseNotFound, "The database #{target_database} cannot be found"
+        raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found"
       end
 
       #   Connect to db, do your biz, switch back to previous db
@@ -163,21 +151,15 @@ module Apartment
       #   --------------------------------------
       def create_database(database_config)
 
-        # Simple hack to let connection use default database for creation process.
-        target_database = database_config[:target_database]
-        database_config[:target_database] = DEFAULT_DB
-
         puts "target_database in create_database is: #{target_database}" if @@debug
 
         process(database_config) do
-          Apartment.connection.create_database target_database
+          Apartment.connection.create_database database_config[:target_database]
         end
 
         # Change the configuration back.
-        database_config[:target_database] = target_database
       rescue *rescuable_exceptions
-        database_config[:target_database] = target_database
-        raise DatabaseExists, "The database #{target_database} already exists."
+        raise DatabaseExists, "The database #{database_config[:target_database]} already exists."
       end
 
       #   Connect to new database
@@ -191,10 +173,10 @@ module Apartment
         Apartment.connection.active?   # call active? to manually check if this connection is valid
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found."
+        raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found."
       end
 
-      #   TODO: We can delete this method since our naming logic is not implemented here.
+=begin
       #   Prepend the environment if configured and the environment isn't already there
       #
       #   @param {String} database Database name
@@ -213,6 +195,7 @@ module Apartment
           database
         end
       end
+=end
 
       #   Import the database schema
       #
@@ -222,7 +205,7 @@ module Apartment
         load_or_abort(Apartment.database_schema_file) if Apartment.database_schema_file
       end
 
-      #   TODO: This method should be deprecated since we provide complete database config.
+=begin
       #   Return a new config that is multi-tenanted
       #   
       #   NOTICE: This method could become dummy 
@@ -240,6 +223,8 @@ module Apartment
           # ... = ..., maybe?
         end
       end
+=end
+
 
       #   Load a file or abort if it doesn't exists
       #   ---------------------------------------------------
