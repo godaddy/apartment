@@ -10,7 +10,7 @@ module Apartment
     extend Forwardable
 
     def_delegators :adapter, :current, :current_database, :current_database_name
-    def_delegators :adapter, :create, :drop, :process, :process_excluded_models
+    def_delegators :adapter, :create, :drop!, :process, :process_excluded_models
     def_delegators :adapter, :reset, :seed, :switch
 
     attr_writer :config
@@ -68,5 +68,4 @@ module Apartment
     end
 
   end
-
 end

@@ -4,7 +4,6 @@
 This file has not been updated to work with multiple database servers.
 !!!WARNING!!!
 
-=end
 
 # handle postgis adapter as if it were postgresql,
 # only override the adapter_method used for initialization
@@ -21,3 +20,5 @@ module Apartment
     end
   end
 end
+
+=end

@@ -17,13 +17,27 @@ end
 
 # Some default setup for elevator specs
 shared_context "elevators", :elevator => true do
-   let(:company1)  { mock_model(Company, :database => Apartment::Test.next_db).as_null_object }
-   let(:company2)  { mock_model(Company, :database => Apartment::Test.next_db).as_null_object }
+  let(:company1)  { mock_model(Company, :database => Apartment::Test.next_db).as_null_object }
+  let(:company2)  { mock_model(Company, :database => Apartment::Test.next_db).as_null_object }
+  
+  let(:database1) { company1.database }
+  let(:database2) { company2.database }
+  
+  let(:api)       { Apartment::Database }
+  
+  let(:database1_config) do
+    database1_config = api.current
+    database1_config[:database] = "information_schema"
+    database1_config[:target_database] = database1
+    database1_config  
+  end
 
-   let(:database1) { company1.database }
-   let(:database2) { company2.database }
-
-   let(:api)       { Apartment::Database }
+  let(:database2_config) do
+    database2_config = api.current
+    database2_config[:database] = "information_schema"
+    database2_config[:target_database] = database2
+    database2_config  
+  end
 
    before do
      Apartment.reset # reset all config
@@ -31,13 +45,13 @@ shared_context "elevators", :elevator => true do
      Apartment.use_schemas = true
      api.reload! # reload adapter
 
-     api.create(database1)
-     api.create(database2)
+     api.create(database1_config)
+     api.create(database2_config)
    end
 
    after do
-     api.drop(database1)
-     api.drop(database2)
+     api.drop!(database1_config)
+     api.drop!(database2_config)
   end
 end
 
@@ -51,6 +65,6 @@ shared_context "persistent_schemas", :persistent_schemas => true do
 
   after do
     Apartment.persistent_schemas = []
-    persistent_schemas.map{|schema| subject.drop(schema) }
+    persistent_schemas.map{|schema| subject.drop!(schema) }
   end
 end

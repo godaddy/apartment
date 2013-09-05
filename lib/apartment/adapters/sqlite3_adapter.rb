@@ -4,8 +4,6 @@
 This file has not been updated to work with multiple database servers.
 !!!WARNING!!!
 
-=end
-
 module Apartment
   module Database
     def self.sqlite3_adapter(config)
@@ -57,3 +55,5 @@ module Apartment
     end
   end
 end
+
+=end

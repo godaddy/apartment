@@ -1,7 +1,11 @@
 require 'apartment/railtie' if defined?(Rails)
-require 'active_record_ext/multi_db_server_threadsafe_ext' # require the override file to activerecord.
 require 'active_support/core_ext/object/blank'
 require 'forwardable'
+
+# require the override file to activerecord.
+require 'active_record_ext/connection_pool_ext'
+require 'active_record_ext/body_proxy_ext'
+
 
 module Apartment
 
@@ -15,11 +19,7 @@ module Apartment
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
 
-    # Please read this doc first:
-    # http://www.ruby-doc.org/stdlib-2.0/libdoc/forwardable/rdoc/Forwardable.html
-    # It is about def_delegators.
-    # It is short and very easy, but without understanding it, this file will be gibberish.
-    def_delegators :connection_class, :connection, :establish_connection, :connection_config
+    def_delegators :connection_class, :connection, :establish_connection, :connection_config, :remove_connection
 
     # configure apartment with available options
     def configure
@@ -88,15 +88,6 @@ module Apartment
     autoload :FirstSubdomain, 'apartment/elevators/first_subdomain'
     autoload :Domain,     'apartment/elevators/domain'
     autoload :HostHash,     'apartment/elevators/host_hash'
-  end
-
-  module Delayed
-
-    autoload :Requirements, 'apartment/delayed_job/requirements'
-
-    module Job
-      autoload :Hooks, 'apartment/delayed_job/hooks'
-    end
   end
 
   # Exceptions

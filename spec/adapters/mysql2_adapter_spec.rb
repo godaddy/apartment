@@ -5,7 +5,8 @@ describe Apartment::Adapters::Mysql2Adapter do
   unless defined?(JRUBY_VERSION)
 
     let(:config){ Apartment::Test.config['connections']['mysql'].symbolize_keys }
-    subject(:adapter){ Apartment::Database.mysql2_adapter config }
+
+    subject(:adapter) { Apartment::Database.mysql2_adapter config }
 
     def database_names
       ActiveRecord::Base.connection.execute("SELECT schema_name FROM information_schema.schemata").collect { |row| row[0] }
@@ -17,9 +18,12 @@ describe Apartment::Adapters::Mysql2Adapter do
       before { Apartment.use_schemas = true }
 
       it_should_behave_like "a generic apartment adapter"
+      it_should_behave_like "a connection based apartment adapter"
 
       describe "#default_database" do
-        its(:default_database){ should == config[:database] }
+        it "should has default_database" do
+          expect(default_database).to eq(config[:database])
+        end
       end
 
       describe "#init" do
@@ -32,12 +36,21 @@ describe Apartment::Adapters::Mysql2Adapter do
         end
 
         it "should process model exclusions" do
+          ActiveRecord::Base.establish_connection
+          ActiveRecord::Base.connection.create_database "company"
           Apartment::Database.init
+          
+          database = Company.connection.instance_variable_get(:@config)[:database]
+          expect(database).to eq("company")
 
-          Company.table_name.should == "#{default_database}.companies"
+          ActiveRecord::Base.connection.execute "DROP DATABASE company"
         end
       end
     end
+
+=begin
+
+    # Our mysql adapter establish connection_pool to database server.
 
     context "using connections" do
       before { Apartment.use_schemas = false }
@@ -45,5 +58,7 @@ describe Apartment::Adapters::Mysql2Adapter do
       it_should_behave_like "a generic apartment adapter"
       it_should_behave_like "a connection based apartment adapter"
     end
+=end
+
   end
 end

@@ -4,12 +4,6 @@ module Apartment
   module Adapters
     class AbstractAdapter
 
-      # Constant holding the default database, 
-      #   since ActiveRecord cannot connect to a database server
-      #      without connecting to a database on it.
-      # TODO: We might be able to find a better way.
-      DEFAULT_DB = "information_schema"
-      
       @@debug = false
 
       #  @constructor
@@ -40,7 +34,7 @@ module Apartment
 
         create_database(database_config)
 
-        # Swich to created new db and do stuff, like seed, then switch back to cur db.
+        # Switch to created new db and do stuff, like seed, then switch back to cur db.
         process(database_config) do
           import_database_schema if import_schema
 
@@ -72,55 +66,42 @@ module Apartment
         Apartment.connection_config[:database]
       end
 
-      #   Note alias_method here doesn't work with inheritence apparently ??
+      #   Note alias_method here doesn't work with inheritance apparently ??
       #
       def current
         current_database
       end
 
       #   Drop the database
-      #
-      #   @param {Hash} database_config, 
-      #         complete info of a database, :database, :host, ...
-      #   --------------------------------------
-      def drop(database_config)
+      def drop!(database_config)
         # Apartment.connection.drop_database   note that drop_database will not throw an exception, so manually execute
         
-        # 1. Connect to the correct database server.
-        default_database_config = database_config.clong.tap {|config| config[:database] = DEFAULT_DB}
-        Apartment.establish_connection default_database_config
-
-        # 2. Drop the target database.
-        Apartment.connection.execute("DROP DATABASE #{database_config[:database]}" )
+        process(database_config) do
+          Apartment.connection.execute("DROP DATABASE #{database_config[:target_database]}" )
+        end
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found"
+        raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found"
       end
 
       #   Connect to db, do your biz, switch back to previous db
       #   --------------------------------------------------------
       #   @param {Hash} database_config, 
       #         complete info of a database, :database, :host, ...
-      #
-      def process(database_config = nil)
+      #   {Boolean} choose if use USE statement while switching to the database_config
+      def process(database_config = nil, use_use=true)
         current_db = current_database
 
-        switch(database_config)
+        switch(database_config, use_use)
 
         yield if block_given?
 
       ensure
+        # Always use USE while switching back.
         switch(current_db) rescue reset
       end
 
-      #   TODO: Not sure if we need this method anymore, may delete it later.
       #   Establish a new connection for each specific excluded model
-      #   ------------------------------------------------------------
-      #   Because a model will inherit from ActiveRecord::Base, the model will
-      #   have a method establish_connection defined in AR::Base class.
-      #
-      #   The logic of this method is that for those exluded_models, connection to 
-      #   default/common db first, then do the business.
       def process_excluded_models
         # All other models will shared a connection (at Apartment.connection_class) and we can modify at will
         Apartment.excluded_models.each do |excluded_model|
@@ -136,25 +117,26 @@ module Apartment
         Apartment.establish_connection @config
       end
 
-      #   Switch to new connection (or schema if appopriate)
+      #   Switch to new connection (or schema if appropriate)
       #
       #   @param {Hash} database_config, :database, :host
+      #   {Boolean} choose if use USE statement while switching to the database_config
       #   ------------------------------------------------
       #   Doc on .tap method.
       #   http://apidock.com/rails/Object/tap
-      def switch(database_config = nil)
+      def switch(database_config=nil, use_use=true)
         # Just connect to default db and return
-
         return reset if database_config.nil?
 
-        connect_to_new(database_config).tap do
+        connect_to_new(database_config, use_use).tap do
           ActiveRecord::Base.connection.clear_query_cache
         end
+
       end
 
       #   Load the rails seed file into the db
       #   ------------------------------------------------
-      #   Explaination on silence_stream:
+      #   Explanation on silence_stream:
       #   http://apidock.com/rails/Kernel/silence_stream
       def seed_data
         silence_stream(STDOUT){ load_or_abort("#{Rails.root}/db/seeds.rb") } # Don't log the output of seeding the db
@@ -170,33 +152,33 @@ module Apartment
       #   --------------------------------------
       def create_database(database_config)
 
-        default_database_config = database_config.clone.tap do |config|
-          config[:database] = DEFAULT_DB          
+        puts "target_database in create_database is: #{target_database}" if @@debug
+
+        process(database_config, false) do
+          Apartment.connection.create_database database_config[:target_database]
         end
 
-        process(default_database_config) do
-          Apartment.connection.create_database database_config[:database]
-        end
-
+        # Change the configuration back.
       rescue *rescuable_exceptions
-        raise DatabaseExists, "The database #{database_config[:database]} already exists."
+        raise DatabaseExists, "The database #{database_config[:target_database]} already exists."
       end
 
       #   Connect to new database
-      #   @param {Hash} database_config, 
-      #         complete info of a database, :database, :host, ...
+      #   @param 
+      #     {Hash} database_config, complete info of a database, :database, :host, ...
+      #     {Boolean} use_use, if use USE statement. In creation process, we do not want to use use since there is not db to use.
       #   --------------------------------------
       #   THIS METHOD IS OVERWRITE IN lib/adapters/mysql2_adapter.rb
       #   To do the "connect to db server, use correct db" trick.
-      def connect_to_new(database_config)
+      def connect_to_new(database_config, use_use)
         Apartment.establish_connection database_config
         Apartment.connection.active?   # call active? to manually check if this connection is valid
 
       rescue *rescuable_exceptions
-        raise DatabaseNotFound, "The database #{database_config[:database]} cannot be found."
+        raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found."
       end
 
-      #   TODO: We can delete this method since our naming logic is not implemented here.
+=begin
       #   Prepend the environment if configured and the environment isn't already there
       #
       #   @param {String} database Database name
@@ -215,16 +197,16 @@ module Apartment
           database
         end
       end
+=end
 
       #   Import the database schema
-      #
       def import_database_schema
         ActiveRecord::Schema.verbose = false    # do not log schema load output.
 
         load_or_abort(Apartment.database_schema_file) if Apartment.database_schema_file
       end
 
-      #   TODO: This method should be deprecated since we provide complete database config.
+=begin
       #   Return a new config that is multi-tenanted
       #   
       #   NOTICE: This method could become dummy 
@@ -242,13 +224,15 @@ module Apartment
           # ... = ..., maybe?
         end
       end
+=end
+
 
       #   Load a file or abort if it doesn't exists
       #   ---------------------------------------------------
       #   See this doc for load:
       #   http://www.ruby-doc.org/core-2.0/Kernel.html#method-i-load
       #
-      #   Basically, load will excute all the ruby codes in "file".
+      #   Basically, load will execute all the ruby codes in "file".
       def load_or_abort(file)
         if File.exists?(file)
           load(file)

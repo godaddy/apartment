@@ -1,3 +1,11 @@
+=begin
+
+This rspec is commented out since the current rake task for migrate is not what we want.
+  If we decide use apartment to do the migration, we need to update the rake task  and rspec test here.
+
+rake task file: apartment/lib/tasks/apartment.rake
+
+
 require 'spec_helper'
 require 'rake'
 
@@ -76,3 +84,4 @@ describe "apartment rake tasks" do
 
   end
 end
+=end

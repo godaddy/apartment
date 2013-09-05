@@ -4,7 +4,6 @@
 This file has not been updated to work with multiple database servers.
 !!!WARNING!!!
 
-=end
 
 require 'apartment/adapters/postgresql_adapter'
 
@@ -73,3 +72,5 @@ module Apartment
     end
   end
 end
+
+=end

@@ -2,6 +2,10 @@ require 'spec_helper'
 
 shared_examples_for "an apartment elevator" do
 
+=begin
+
+  This test is for postgreSql adapter.
+
   context "single request" do
     it "should switch the db" do
       ActiveRecord::Base.connection.schema_search_path.should_not == %{"#{database1}"}
@@ -10,6 +14,11 @@ shared_examples_for "an apartment elevator" do
       ActiveRecord::Base.connection.schema_search_path.should == %{"#{database1}"}
     end
   end
+=end
+
+=begin
+
+  This test no longer applies since we are using different database servers.
 
   context "simultaneous requests" do
 
@@ -28,4 +37,7 @@ shared_examples_for "an apartment elevator" do
       User.count.should == c1_user_count
     end
   end
+
+=end
+
 end
