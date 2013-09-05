@@ -24,7 +24,7 @@ module Apartment
         # ActiveRecord::Base.connection.current_database becomes a private method.
         # Apartment.connection.current_database # 3.2.13
       
-        # 3.2.14 # Running MySql command directly to retrive the current used db name.
+        # 3.2.14 # Running MySql command directly to retrieve the current used db name.
         Apartment.connection.select_value 'SELECT DATABASE() as db'
       end
 
@@ -40,7 +40,7 @@ module Apartment
       #   ---------------------------------------
       def connect_to_new(database_config, use_use)
 
-        # Step1: using establish_connection to retrive/start a connection to the db server.
+        # Step1: using establish_connection to retrieve/start a connection to the db server.
         Apartment.establish_connection database_config
 
         # Step2: use "USE" to connect to the desired database.

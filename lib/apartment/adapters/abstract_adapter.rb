@@ -34,7 +34,7 @@ module Apartment
 
         create_database(database_config)
 
-        # Swich to created new db and do stuff, like seed, then switch back to cur db.
+        # Switch to created new db and do stuff, like seed, then switch back to cur db.
         process(database_config) do
           import_database_schema if import_schema
 
@@ -66,7 +66,7 @@ module Apartment
         Apartment.connection_config[:database]
       end
 
-      #   Note alias_method here doesn't work with inheritence apparently ??
+      #   Note alias_method here doesn't work with inheritance apparently ??
       #
       def current
         current_database
@@ -117,7 +117,7 @@ module Apartment
         Apartment.establish_connection @config
       end
 
-      #   Switch to new connection (or schema if appopriate)
+      #   Switch to new connection (or schema if appropriate)
       #
       #   @param {Hash} database_config, :database, :host
       #   {Boolean} choose if use USE statement while switching to the database_config
@@ -126,7 +126,6 @@ module Apartment
       #   http://apidock.com/rails/Object/tap
       def switch(database_config=nil, use_use=true)
         # Just connect to default db and return
-
         return reset if database_config.nil?
 
         connect_to_new(database_config, use_use).tap do
@@ -137,7 +136,7 @@ module Apartment
 
       #   Load the rails seed file into the db
       #   ------------------------------------------------
-      #   Explaination on silence_stream:
+      #   Explanation on silence_stream:
       #   http://apidock.com/rails/Kernel/silence_stream
       def seed_data
         silence_stream(STDOUT){ load_or_abort("#{Rails.root}/db/seeds.rb") } # Don't log the output of seeding the db
@@ -201,7 +200,6 @@ module Apartment
 =end
 
       #   Import the database schema
-      #
       def import_database_schema
         ActiveRecord::Schema.verbose = false    # do not log schema load output.
 
@@ -234,7 +232,7 @@ module Apartment
       #   See this doc for load:
       #   http://www.ruby-doc.org/core-2.0/Kernel.html#method-i-load
       #
-      #   Basically, load will excute all the ruby codes in "file".
+      #   Basically, load will execute all the ruby codes in "file".
       def load_or_abort(file)
         if File.exists?(file)
           load(file)
