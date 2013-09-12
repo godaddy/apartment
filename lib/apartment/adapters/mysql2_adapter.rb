@@ -5,11 +5,17 @@ module Apartment
     def self.mysql2_adapter(config)
         Adapters::Mysql2Adapter.new(config)
     end
+
   end
 
   module Adapters
 
     class Mysql2Adapter < AbstractAdapter
+
+      def initialize(config)
+        super
+        @current_db_name = config[:database]
+      end
 
       def process_excluded_models
         Apartment.excluded_models.each do |excluded_model|
@@ -20,12 +26,7 @@ module Apartment
 
       # return {string}, name of the current database
       def current_database_name
-        # In the release of rails 3.2.14 rc2, 
-        # ActiveRecord::Base.connection.current_database becomes a private method.
-        # Apartment.connection.current_database # 3.2.13
-      
-        # 3.2.14 # Running MySql command directly to retrieve the current used db name.
-        Apartment.connection.select_value 'SELECT DATABASE() as db'
+        return @current_db_name
       end
 
     protected
@@ -42,6 +43,7 @@ module Apartment
 
         # Step1: using establish_connection to retrieve/start a connection to the db server.
         Apartment.establish_connection database_config
+        @current_db_name = database_config[:target_database]
 
         # Step2: use "USE" to connect to the desired database.
         # the only situation that :target_database is nil that database_config is the dummy default config.
