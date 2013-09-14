@@ -12,21 +12,11 @@ module Apartment
 
     class Mysql2Adapter < AbstractAdapter
 
-      def initialize(config)
-        super
-        @current_db_name = config[:database]
-      end
-
       def process_excluded_models
         Apartment.excluded_models.each do |excluded_model|
           puts "[EXCLUDED] Build connection for #{excluded_model}" if @@debug
           excluded_model.constantize.build_connection
         end
-      end
-
-      # return {string}, name of the current database
-      def current_database_name
-        return @current_db_name
       end
 
     protected
@@ -43,7 +33,6 @@ module Apartment
 
         # Step1: using establish_connection to retrieve/start a connection to the db server.
         Apartment.establish_connection database_config
-        @current_db_name = database_config[:target_database]
 
         # Step2: use "USE" to connect to the desired database.
         # the only situation that :target_database is nil that database_config is the dummy default config.
