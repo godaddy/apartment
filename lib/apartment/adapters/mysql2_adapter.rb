@@ -19,6 +19,19 @@ module Apartment
         end
       end
 
+      # Maintain current database name being used
+      # This is necessary because our connection pooling ignores database name and we have
+      # no direct reference to db name (we simply call "USE [database]" for db switching)
+      # Keeping the database name in thread current to be thread safe and relying on this
+      # value being set every time db connection changes (see connect_to_new method in this class)
+      def current_database_name
+        Thread.current[:apartment_current_database_name]
+      end
+
+      def current_database_name=(name)
+        Thread.current[:apartment_current_database_name] = name
+      end
+
     protected
 
       #   Connect to new database
@@ -38,6 +51,7 @@ module Apartment
         # the only situation that :target_database is nil that database_config is the dummy default config.
         unless database_config[:target_database].nil?
           Apartment.connection.execute "USE #{database_config[:target_database]}" if use_use
+          self.current_database_name = database_config[:target_database]
         end
 
       rescue Mysql2::Error, ActiveRecord::StatementInvalid
