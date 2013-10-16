@@ -1,8 +1,6 @@
-=begin
-
-!!!WARNING!!!
-This file has not been updated to work with multiple database servers.
-!!!WARNING!!!
+#!!!WARNING!!!
+#This file has not been updated to work with multiple database servers.
+#!!!WARNING!!!
 
 module Apartment
   module Database
@@ -55,5 +53,3 @@ module Apartment
     end
   end
 end
-
-=end
