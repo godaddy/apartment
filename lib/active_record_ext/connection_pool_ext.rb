@@ -1,35 +1,24 @@
-=begin
-
-# Original file path:
-# activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb
-
 if defined?(ActiveRecord)
-	
-  module ActiveRecord
-    module ConnectionAdapters
-      class ConnectionHandler
 
-        @@debug = false
+  ActiveRecord.module_eval do
+    ActiveRecord::ConnectionAdapters.module_eval do
+      ActiveRecord::ConnectionAdapters::ConnectionHandler.class_eval do
 
-        def establish_connection(name, spec)
-          puts "Spec.config in establish_connection is: " if @@debug
-          puts "#{spec.config}" if @@debug
-
-          # Use, host and database name as the unique key to each connection_pool,
-          #   notice we are creating connection pool to each database *server*.
-          connection_pool_key = get_connection_pools_key(spec.config)
-
-          # Create one if connection_pool to this database server hasn't been created yet.
-          @connection_pools[connection_pool_key] ||= ConnectionAdapters::ConnectionPool.new(spec)
-          @class_to_pool[name] = @connection_pools[connection_pool_key]
+        # Reuse or create a connection pool.
+        # Copied from ActiveRecord and modified to reuse an existing pool if there is one.
+        def establish_connection(owner, spec)
+          @class_to_pool.clear
+          raise RuntimeError, "Anonymous class is not allowed." unless owner.name
+          owner_to_pool[owner.name] ||= connection_pool(spec)
         end
 
-        # Remove connection will only remove the class to pool mapping, 
-        #   but will NOT kill the pool.
-        def remove_connection(klass)
-          pool = @class_to_pool.delete(klass.name)
-          return nil unless pool
-          pool.spec.config
+        # Remove connection will only remove the owner to pool mapping,
+        # but will NOT kill the pool.
+        def remove_connection(owner)
+          if pool = owner_to_pool.delete(owner.name)
+            @class_to_pool.clear
+            pool.spec.config
+          end
         end
 
         private
@@ -37,9 +26,16 @@ if defined?(ActiveRecord)
         # Get the key of connection_pools based on the input database config.
         def get_connection_pools_key(config)
           {
-            :host => config[:host], 
-            :database => config[:database]
+            host:     config[:host],
+            database: config[:database]
           }
+        end
+
+        # Return a (possibly pre-existing) connection pool based on a database config.
+        def connection_pool(spec)
+          connection_pool_key = get_connection_pools_key(spec.config)
+          @connection_pools ||= {}
+          @connection_pools[connection_pool_key] ||= ActiveRecord::ConnectionAdapters::ConnectionPool.new(spec)
         end
 
       end
@@ -47,6 +43,3 @@ if defined?(ActiveRecord)
   end
 
 end
-
-=end
-
