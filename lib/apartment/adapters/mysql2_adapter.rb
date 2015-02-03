@@ -50,6 +50,8 @@ module Apartment
         # Step2: use "USE" to connect to the desired database.
         # the only situation that :target_database is nil that database_config is the dummy default config.
         self.current_database_name = database_config[:database]
+        #Use preloaded schema_cache to avoid problems during migrations
+        Apartment.connection.schema_cache = Apartment::Database.schema_cache if Apartment::Database.schema_cache
         if database_config[:target_database] && use_use
           Apartment.connection.execute "USE #{database_config[:target_database]}"
           self.current_database_name = database_config[:target_database]

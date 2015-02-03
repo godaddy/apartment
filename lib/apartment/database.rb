@@ -15,6 +15,8 @@ module Apartment
 
     attr_writer :config
 
+    attr_accessor :schema_cache
+
     #   Initialize Apartment config options such as excluded_models
     #
     def init
