@@ -33,7 +33,8 @@ if defined?(ActiveRecord)
         def get_connection_pools_key(config)
           {
             host:     config[:host],
-            database: config[:database]
+            database: config[:database],
+            port:     config[:port]
           }
         end
 
