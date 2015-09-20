@@ -31,6 +31,19 @@ module Apartment
         Thread.current[:apartment_current_database_name] = name
       end
 
+      # Override process method to ensure current database is restored propertly
+      def process(database_config = nil, use_use=true)
+        saved_config = current_database.merge({target_database: current_database_name})
+
+        switch(database_config, use_use)
+
+        yield if block_given?
+
+      ensure
+        # Always use USE while switching back.
+        switch(saved_config) rescue reset
+      end
+
     protected
 
       #   Connect to new database
@@ -42,17 +55,22 @@ module Apartment
       #     {Boolean} use_use, if use USE statement. In creation process, we do not want to use use since there is not db to use.
       #   ---------------------------------------
       def connect_to_new(database_config, use_use)
-
-        # Step1: using establish_connection to retrieve/start a connection to the db server.
-        Apartment.establish_connection database_config
-
-        # Step2: use "USE" to connect to the desired database.
-        # the only situation that :target_database is nil that database_config is the dummy default config.
+        # use establish_connection to retrieve/start a connection to the db server
+        # ensure :target_database is excluded from the config to prevent connection pool segmentation based on
+        # dynamically switched (via USE command) database name
+        Apartment.establish_connection database_config.reject {|k,_| k == :target_database}
         self.current_database_name = database_config[:database]
+
         #Use preloaded schema_cache to avoid problems during migrations
         Apartment.connection.schema_cache = Apartment::Database.schema_cache if Apartment::Database.schema_cache
+
+        # use "USE" statement to connect to the desired database.
+        # the only situation that :target_database should be nil
+        # is when database_config is the dummy default config and :database is not nil
         if database_config[:target_database] && use_use
           Apartment.connection.execute "USE #{database_config[:target_database]}"
+
+          # set the current database name to the db we just switched to with USE statement
           self.current_database_name = database_config[:target_database]
         end
 
