@@ -4,8 +4,6 @@ module Apartment
   module Adapters
     class AbstractAdapter
 
-      @@debug = false
-
       #  @constructor
       #  @param {Hash} config Database config
       #  ------------------------------------------------------
@@ -28,10 +26,6 @@ module Apartment
       #         complete info of a database, :database, :host, ...
       #   --------------------------------------------------------
       def create(database_config, import_schema=true)
-
-        puts "Creating databse with database_config:" if @@debug
-        puts "#{database_config}" if @@debug
-
         create_database(database_config)
 
         # Switch to created new db and do stuff, like seed, then switch back to cur db.
@@ -43,14 +37,9 @@ module Apartment
 
           yield if block_given?
         end
-
-        puts "Creating finished, now in database:" if @@debug
-        puts "#{current_database}" if @@debug
       end
 
-      #   Get the current database name
-      #
-      #   @return {Hash} current database's config
+      #   Get the current database config
       #   ---------------------------------------
       def current_database
         Apartment.connection_config
@@ -106,7 +95,6 @@ module Apartment
         end
       end
 
-      ## TODO: We might need to find a better solution in case of reset.
       ## Current logic just connect to the default config, which should be defined in the database.yml file.
       #   Reset the database connection to the default
       #   --------------------------------------
@@ -149,9 +137,6 @@ module Apartment
       #         complete info of a database, :database, :host, ...
       #   --------------------------------------
       def create_database(database_config)
-
-        puts "target_database in create_database is: #{target_database}" if @@debug
-
         process(database_config, false) do
           Apartment.connection.create_database database_config[:target_database]
         end
@@ -166,7 +151,7 @@ module Apartment
       #     {Hash} database_config, complete info of a database, :database, :host, ...
       #     {Boolean} use_use, if use USE statement. In creation process, we do not want to use use since there is not db to use.
       #   --------------------------------------
-      #   THIS METHOD IS OVERWRITE IN lib/adapters/mysql2_adapter.rb
+      #   THIS METHOD IS OVERWRITTEN IN lib/adapters/mysql2_adapter.rb
       #   To do the "connect to db server, use correct db" trick.
       def connect_to_new(database_config, use_use)
         Apartment.establish_connection database_config
@@ -176,26 +161,6 @@ module Apartment
         raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found."
       end
 
-=begin
-      #   Prepend the environment if configured and the environment isn't already there
-      #
-      #   @param {String} database Database name
-      #   @return {String} database name with Rails environment *optionally* prepended
-      #
-      def environmentify(database)
-        unless database.include?(Rails.env)
-          if Apartment.prepend_environment
-            "#{Rails.env}_#{database}"
-          elsif Apartment.append_environment
-            "#{database}_#{Rails.env}"
-          else
-            database
-          end
-        else
-          database
-        end
-      end
-=end
 
       #   Import the database schema
       def import_database_schema
@@ -203,27 +168,6 @@ module Apartment
 
         load_or_abort(Apartment.database_schema_file) if Apartment.database_schema_file
       end
-
-=begin
-      #   Return a new config that is multi-tenanted
-      #   
-      #   NOTICE: This method could become dummy 
-      #             if database_config is the full configuration.
-      #   --------------------------------------------------
-      #   MAGIC IS HERE:
-      #   this method will update the @config with point to correct database
-      #   by updating the hash.
-      def multi_tenantify(database_config)
-        @config.clone.tap do |config|
-          config[:database] = environmentify(database_config[:database])
-          config[:host] = database_config[:host] unless database_config[:host].nil?
-          config[:username] = database_config[:username] #unless database_config[:username].nil?
-          config[:password] = database_config[:password] #unless database_config[:password].nil?
-          # ... = ..., maybe?
-        end
-      end
-=end
-
 
       #   Load a file or abort if it doesn't exists
       #   ---------------------------------------------------

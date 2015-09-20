@@ -14,7 +14,6 @@ module Apartment
 
       def process_excluded_models
         Apartment.excluded_models.each do |excluded_model|
-          puts "[EXCLUDED] Build connection for #{excluded_model}" if @@debug
           excluded_model.constantize.build_connection
         end
       end
