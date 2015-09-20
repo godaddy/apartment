@@ -87,7 +87,7 @@ module Apartment
       #         complete info of a database, :database, :host, ...
       #   {Boolean} choose if use USE statement while switching to the database_config
       def process(database_config = nil, use_use=true)
-        current_db = current_database
+        current_db = current_database.dup
 
         switch(database_config, use_use)
 
