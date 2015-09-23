@@ -64,7 +64,7 @@ module Apartment
           Apartment.connection.execute("DROP DATABASE #{database_config[:target_database]}" )
         end
 
-        self.current_database_name = nil if self.current_database_name == database_config[:target_database]
+        Apartment.connection_config[:target_database] = nil if self.current_database_name == database_config[:target_database]
 
       rescue *rescuable_exceptions
         raise DatabaseNotFound, "The database #{database_config[:target_database]} cannot be found"
@@ -100,7 +100,7 @@ module Apartment
       #   --------------------------------------
       def reset
         Apartment.establish_connection @config
-        self.current_database_name = @config[:database]
+        Apartment.connection_config[:target_database] = Apartment.connection_config[:database]
       end
 
       #   Switch to new connection (or schema if appropriate)
