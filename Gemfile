@@ -2,7 +2,7 @@ source 'http://rubygems.org'
 
 gemspec
 
-gem 'rails',        '~> 4.0.5'
+gem 'rails',        '~> 4.1.15'
 gem 'rake',         '~> 0.9'
 gem 'rspec',        '~> 2.11'
 gem 'rspec-rails',  '~> 2.11'
