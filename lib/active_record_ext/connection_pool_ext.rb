@@ -15,8 +15,11 @@ if defined?(ActiveRecord)
         def establish_connection(owner, spec)
           @class_to_pool.clear
           raise RuntimeError, "Anonymous class is not allowed." unless owner.name
+          puts ""
           puts ">>>>>>>>>>>>>>>>>>> OWNER NAME: #{owner.name} <<<<<<<<<<<<<<<<<<<<<<<<<<<<"
           puts ">>>>>>>>>>>>>> SPEC: #{spec.inspect} <<<<<<<<<<<<<<<<<<<<<<<<"
+          puts ">>>>>>>>>>>>>>>>>>>> POOL: #{owner_to_pool[owner.name]} <<<<<<<<<<<<<<<<<<<<"
+          puts ""
           owner_to_pool[owner.name] ||= connection_pool(spec)
         end
 
