@@ -15,14 +15,15 @@ if defined?(ActiveRecord)
         def establish_connection(owner, spec)
           @class_to_pool.clear
           raise RuntimeError, "Anonymous class is not allowed." unless owner.name
-          puts ">>>>>>>>>>>>>>>>>>> OWNER NAME: #{owner_to_pool_key(owner)} <<<<<<<<<<<<<<<<<<<<<<<<<<<<"
-          owner_to_pool[owner_to_pool_key(owner)] ||= connection_pool(spec)
+          puts ">>>>>>>>>>>>>>>>>>> OWNER NAME: #{owner.name} <<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+          puts ">>>>>>>>>>>>>> SPEC: #{spec.inspect} <<<<<<<<<<<<<<<<<<<<<<<<"
+          owner_to_pool[owner.name] ||= connection_pool(spec)
         end
 
         # Remove connection will only remove the owner to pool mapping,
         # but will NOT kill the pool.
         def remove_connection(owner)
-          if pool = owner_to_pool.delete(owner_to_pool_key(owner))
+          if pool = owner_to_pool.delete(owner.name)
             @class_to_pool.clear
             pool.spec.config
           end
@@ -30,9 +31,6 @@ if defined?(ActiveRecord)
 
         private
 
-        def owner_to_pool_key(owner)
-          "#{Thread.current.object_id}|#{owner.name}"
-        end
         # Get the key of connection_pools based on the input database config.
         def get_connection_pools_key(config)
           "#{Thread.current.object_id}|#{config[:host]}|#{config[:database]}|#{config[:port]}"
